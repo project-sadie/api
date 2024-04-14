@@ -14,9 +14,8 @@ func main() {
 		log.Fatal(dotenvError)
 	}
 
+	loadDatabase()
 	setupOauth()
 	registerRoutes()
 	serveHttp()
-
-	log.Println("yo")
 }

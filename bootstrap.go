@@ -6,6 +6,7 @@ import (
 	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/errors"
 	"github.com/go-oauth2/oauth2/v4/manage"
+	"github.com/go-oauth2/oauth2/v4/models"
 	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/go-oauth2/oauth2/v4/store"
 	"github.com/jinzhu/gorm"
@@ -13,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -44,6 +46,33 @@ func setupOauth() {
 	manager.MustTokenStorage(store.NewMemoryTokenStore())
 
 	clientStore := store.NewClientStore()
+
+	var clients []OauthClient
+
+	clientError := database.
+		Model(OauthClient{}).
+		Find(&clients).Error
+
+	if len(clients) > 0 {
+		serviceClient = clients[0]
+	}
+
+	if clientError != nil {
+		log.Fatalln(clientError)
+		return
+	}
+
+	for _, client := range clients {
+		log.Println("Registered oauth client " + strconv.FormatInt(client.ID, 10))
+
+		clientId := strconv.FormatInt(client.ID, 10)
+
+		clientStore.Set(clientId, &models.Client{
+			ID:     clientId,
+			Secret: client.Secret,
+			Domain: client.Domain,
+		})
+	}
 
 	manager.MapClientStorage(clientStore)
 
