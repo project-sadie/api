@@ -1,16 +1,27 @@
-package sadie_api
+package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/go-oauth2/oauth2/v4"
+	"github.com/go-oauth2/oauth2/v4/errors"
+	"github.com/go-oauth2/oauth2/v4/manage"
+	"github.com/go-oauth2/oauth2/v4/server"
+	"github.com/go-oauth2/oauth2/v4/store"
 	"github.com/jinzhu/gorm"
+	"golang.org/x/net/context"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 )
 
 var database *gorm.DB
 var databaseError error
+var oauthServer *server.Server
+var serviceClient OauthClient
 
-func testDatabaseConnection() {
+func loadDatabase() {
 	var connectionString = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true",
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASS"),
@@ -26,4 +37,77 @@ func testDatabaseConnection() {
 		log.Println("We connected to the database.")
 		database.LogMode(true)
 	}
+}
+
+func setupOauth() {
+	manager := manage.NewDefaultManager()
+	manager.MustTokenStorage(store.NewMemoryTokenStore())
+
+	clientStore := store.NewClientStore()
+
+	manager.MapClientStorage(clientStore)
+
+	oauthServer = server.NewDefaultServer(manager)
+	oauthServer.SetAllowGetAccessRequest(true)
+	oauthServer.SetClientInfoHandler(server.ClientFormHandler)
+
+	oauthServer.SetResponseErrorHandler(func(re *errors.Response) {
+		log.Println("Response Error:", re.Error.Error())
+	})
+
+	oauthServer.SetPasswordAuthorizationHandler(func(ctx context.Context, clientID, username, password string) (userID string, err error) {
+
+		return "", errors.New("no account exists with that email")
+	})
+
+	oauthServer.SetAllowedGrantType(oauth2.PasswordCredentials)
+}
+
+func authorizeMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authorizationHeader := r.Header.Get("Authorization")
+
+		if authorizationHeader == "" || !strings.HasPrefix(authorizationHeader, "Bearer ") {
+			w.WriteHeader(401)
+			return
+		}
+
+		tokenInfo, error := oauthServer.ValidationBearerToken(r)
+
+		if error != nil {
+			w.WriteHeader(401)
+			json.NewEncoder(w).Encode(DefaultApiResponse{Message: error.Error()})
+			return
+		}
+
+		if tokenInfo == nil {
+			w.WriteHeader(401)
+			json.NewEncoder(w).Encode(DefaultApiResponse{Message: "UNKNOWN_ERROR_AUTH_3"})
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "tokenInfo", tokenInfo)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func serveHttp() {
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("HTTP_PORT"), corsHandler(router)))
+}
+
+func corsHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "false")
+		w.Header().Set("Access-Control-Allow-Headers", r.Header.Get("Access-Control-Request-Headers"))
+
+		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+			w.Header().Set("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.Header().Set("Vary", "Origin")
+			h.ServeHTTP(w, r)
+		}
+	})
 }

@@ -1,4 +1,4 @@
-package sadie_api
+package main
 
 import (
 	"github.com/joho/godotenv"
@@ -14,5 +14,9 @@ func main() {
 		log.Fatal(dotenvError)
 	}
 
-	testDatabaseConnection()
+	setupOauth()
+	registerRoutes()
+	serveHttp()
+
+	log.Println("yo")
 }
