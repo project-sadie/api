@@ -116,13 +116,22 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 	password := bodyMap["password"].(string)
 
 	player := Player{
-		Username: username,
-		Password: password,
+		Username:  username,
+		Password:  password,
+		CreatedAt: time.Now(),
 	}
 
-	database.Create(&player)
+	var dbError = database.Create(&player).Error
 
-	fmt.Println("Made player ", player.ID)
+	if dbError != nil {
+		log.Fatalln(dbError)
+	}
+
+	// TODO; create avatar data
+	// TODO; create player data
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(player)
 }
 
 func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {

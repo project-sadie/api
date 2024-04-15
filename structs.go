@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 type OauthClient struct {
 	ID     int64  `json:"id"`
 	Secret string `json:"secret"`
@@ -19,6 +21,7 @@ type Player struct {
 	ID         int64            `json:"id" gorm:"primary_key"`
 	Username   string           `json:"username"`
 	Password   string           `json:"-"`
+	CreatedAt  time.Time        `json:"created_at"`
 	AvatarData PlayerAvatarData `json:"avatar_data"`
 }
 
