@@ -11,12 +11,17 @@ type DefaultApiResponse struct {
 }
 
 type Credentials struct {
-	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
 type Player struct {
-	ID       int64  `json:"id" gorm:"primary_key"`
-	Username string `json:"username"`
-	Password string `json:"-"`
+	ID         int64            `json:"id" gorm:"primary_key"`
+	Username   string           `json:"username"`
+	Password   string           `json:"-"`
+	AvatarData PlayerAvatarData `json:"avatar_data"`
+}
+
+type PlayerAvatarData struct {
+	PlayerId int64 `json:"player_id"`
 }

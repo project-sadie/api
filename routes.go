@@ -10,7 +10,8 @@ func registerRoutes() {
 	router = mux.NewRouter().StrictSlash(true)
 
 	router.HandleFunc("/auth/token", TokenRequestHandler).Methods("GET")
-	router.HandleFunc("/auth/login", UserLoginHandler).Methods("POST")
+	router.HandleFunc("/auth/login", PlayerLoginHandler).Methods("POST")
+	router.HandleFunc("/auth/create", PlayerCreateHandler).Methods("POST")
 
 	router.HandleFunc("/ping", PingHandler)
 
@@ -18,4 +19,5 @@ func registerRoutes() {
 	authRouter.Use(authorizeMiddleware)
 
 	authRouter.HandleFunc("/auth/me", PlayerRequestHandler)
+	authRouter.HandleFunc("/sso-token", PlayerSsoTokenHandler)
 }

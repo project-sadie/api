@@ -18,7 +18,7 @@ func TokenRequestHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(err)
 }
 
-func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
+func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -30,7 +30,7 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	var player Player
 
 	var queryError = database.Model(Player{}).
-		Where("email = ?", credentials.Email).
+		Where("username = ?", credentials.Username).
 		First(&player).
 		Error
 
@@ -38,13 +38,16 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 
 		response := map[string]string{
-			"error_message": "Couldn't find any users with this email",
+			"error_message": "Couldn't find a record with this username",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
+	fmt.Println(credentials.Password)
+	fmt.Println(player.Password)
 
 	if bcrypt.CompareHashAndPassword([]byte(player.Password), []byte(credentials.Password)) != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -63,7 +66,7 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 		ClientSecret: serviceClient.Secret,
 		Request:      r,
 		Scope:        "read",
-		UserID:       credentials.Email,
+		UserID:       credentials.Username,
 	})
 
 	if tokenError != nil {
@@ -90,6 +93,7 @@ func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var player Player
 
 	var queryError = database.Model(Player{}).
+		Preload("AvatarData").
 		Where("email = ?", tokenInfo.GetUserID()).
 		First(&player).
 		Error
@@ -100,4 +104,27 @@ func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(player)
+}
+
+func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
+	var bodyMap map[string]interface{}
+
+	decoder := json.NewDecoder(r.Body)
+	_ = decoder.Decode(&bodyMap)
+
+	username := bodyMap["username"].(string)
+	password := bodyMap["password"].(string)
+
+	player := Player{
+		Username: username,
+		Password: password,
+	}
+
+	database.Create(&player)
+
+	fmt.Println("Made player ", player.ID)
+}
+
+func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
+
 }
