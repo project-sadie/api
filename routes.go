@@ -14,14 +14,15 @@ func registerRoutes() {
 	router.HandleFunc("/auth/create", PlayerCreateHandler).Methods("POST")
 
 	router.HandleFunc("/send-password-reset-email", SendForgotPasswordEmailHandler).Methods("POST")
-	router.HandleFunc("/reset-password-link/{token}", GetResetPasswordLink).Methods("GET")
-	router.HandleFunc("/reset-password-link/{token}", ResetPasswordHandler).Methods("POST")
 
-	router.HandleFunc("/ping", PingHandler)
+	router.HandleFunc("/reset-password/{token}", GetResetPasswordLink).Methods("GET")
+	router.HandleFunc("/reset-password/{token}", ResetPasswordHandler).Methods("POST")
+
+	router.HandleFunc("/ping", PingHandler).Methods("GET")
 
 	authRouter := router.PathPrefix("/").Subrouter()
 	authRouter.Use(authorizeMiddleware)
 
-	authRouter.HandleFunc("/auth/me", PlayerRequestHandler)
-	authRouter.HandleFunc("/sso-token", PlayerSsoTokenHandler)
+	authRouter.HandleFunc("/auth/me", PlayerRequestHandler).Methods("GET")
+	authRouter.HandleFunc("/sso-token", PlayerSsoTokenHandler).Methods("GET")
 }
