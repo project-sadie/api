@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
@@ -19,7 +20,6 @@ func TokenRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
-
 	w.Header().Set("Content-Type", "application/json")
 
 	decoder := json.NewDecoder(r.Body)
@@ -84,6 +84,7 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "reachable"})
 }
 
@@ -94,7 +95,7 @@ func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	var queryError = database.Model(Player{}).
 		Preload("AvatarData").
-		Where("email = ?", tokenInfo.GetUserID()).
+		Where("username = ?", tokenInfo.GetUserID()).
 		First(&player).
 		Error
 
@@ -107,17 +108,71 @@ func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	var bodyMap map[string]interface{}
 
 	decoder := json.NewDecoder(r.Body)
 	_ = decoder.Decode(&bodyMap)
 
 	username := bodyMap["username"].(string)
+	email := bodyMap["email"].(string)
 	password := bodyMap["password"].(string)
+	passwordConfirm := bodyMap["password_confirm"].(string)
+
+	if len(username) < 3 {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The username you've selected is too short"})
+		return
+	}
+
+	if len(username) > 20 {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The username you've selected is too long"})
+		return
+	}
+
+	if password != passwordConfirm {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your password confirmation must match your password"})
+		return
+	}
+
+	if len(password) < 10 {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The password you've selected is too short"})
+		return
+	}
+
+	var foundPlayer Player
+	var queryError = database.Model(Player{}).
+		Where("username = ?", username).
+		First(&foundPlayer).
+		Error
+
+	if !errors.Is(queryError, gorm.ErrRecordNotFound) {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The username you've chosen has been taken"})
+		return
+	}
+
+	if isValidEmail(email) == false {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Please provide a real email address"})
+		return
+	}
+
+	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+	if hashError != nil {
+		log.Fatalln(hashError)
+		return
+	}
 
 	player := Player{
 		Username:  username,
-		Password:  password,
+		Email:     email,
+		Password:  string(hashedPassword),
 		CreatedAt: time.Now(),
 	}
 
@@ -125,15 +180,110 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if dbError != nil {
 		log.Fatalln(dbError)
+		return
 	}
 
-	// TODO; create avatar data
-	// TODO; create player data
+	playerData := PlayerData{
+		PlayerId:        player.ID,
+		HomeRoomId:      getEnvAsInt32("DEFAULT_PLAYER_HOME_ROOM", 0),
+		CreditBalance:   getEnvAsInt64("DEFAULT_PLAYER_CREDITS", 10000),
+		PixelBalance:    getEnvAsInt64("DEFAULT_PLAYER_PIXELS", 10000),
+		SeasonalBalance: getEnvAsInt64("DEFAULT_PLAYER_SEASONAL", 500),
+	}
+
+	var dataError = database.Create(&playerData).Error
+
+	if dataError != nil {
+		log.Fatalln("Failed to create player data: ", dataError)
+		return
+	}
+
+	avatarData := PlayerAvatarData{
+		PlayerId:     player.ID,
+		FigureCode:   os.Getenv("DEFAULT_PLAYER_OUTFIT"),
+		Motto:        os.Getenv("DEFAULT_PLAYER_MOTTO"),
+		Gender:       "M",
+		ChatBubbleId: 1,
+	}
+
+	var avatarDataError = database.Create(&avatarData).Error
+
+	if avatarDataError != nil {
+		log.Fatalln(avatarDataError)
+		return
+	}
+
+	gameSettings := PlayerGameSettings{
+		PlayerId: player.ID,
+	}
+
+	var gameSettingsError = database.Create(&gameSettings).Error
+
+	if gameSettingsError != nil {
+		log.Fatalln(gameSettingsError)
+		return
+	}
+
+	navigatorSettings := PlayerNavigatorSettings{
+		PlayerId: player.ID,
+	}
+
+	var navigatorSettingsError = database.Create(&navigatorSettings).Error
+
+	if navigatorSettingsError != nil {
+		log.Fatalln(navigatorSettingsError)
+		return
+	}
+
+	websiteData := PlayerWebsiteData{
+		PlayerId:  player.ID,
+		InitialIp: getUserIp(r),
+		LastIp:    getUserIp(r),
+	}
+
+	var websiteDataError = database.Create(&websiteData).Error
+
+	if websiteDataError != nil {
+		log.Fatalln(websiteDataError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(player)
 }
 
 func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
+	tokenInfo := r.Context().Value("tokenInfo").(oauth2.TokenInfo)
+
+	var player Player
+
+	var queryError = database.Model(Player{}).
+		Where("username = ?", tokenInfo.GetUserID()).
+		First(&player).
+		Error
+
+	if queryError != nil {
+		log.Fatalln(queryError)
+		return
+	}
+
+	seedRandom()
+
+	token := PlayerSsoToken{
+		PlayerId:  player.ID,
+		Token:     randSeq(20),
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(time.Minute * 30),
+	}
+
+	var tokenError = database.Create(&token).Error
+
+	if tokenError != nil {
+		log.Fatalln(tokenError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(token)
 }

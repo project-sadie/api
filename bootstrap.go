@@ -49,13 +49,18 @@ func setupOauth() {
 
 	var clients []OauthClient
 
+	domain := os.Getenv("HTTP_HOST")
+
 	clientError := database.
 		Model(OauthClient{}).
 		Find(&clients).Error
 
-	if len(clients) > 0 {
-		serviceClient = clients[0]
+	if len(clients) < 1 {
+		log.Fatalln("You must register at least one oauth client", domain)
+		return
 	}
+
+	serviceClient = clients[0]
 
 	if clientError != nil {
 		log.Fatalln(clientError)
