@@ -13,6 +13,9 @@ func registerRoutes() {
 	router.HandleFunc("/auth/login", PlayerLoginHandler).Methods("POST")
 	router.HandleFunc("/auth/create", PlayerCreateHandler).Methods("POST")
 
+	router.HandleFunc("/send-password-reset-email", SendForgotPasswordEmailHandler).Methods("POST")
+	router.HandleFunc("/reset-password", ResetPasswordHandler).Methods("POST")
+
 	router.HandleFunc("/ping", PingHandler)
 
 	authRouter := router.PathPrefix("/").Subrouter()

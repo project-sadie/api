@@ -85,7 +85,7 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "reachable"})
+	json.NewEncoder(w).Encode(DefaultApiResponse{Message: time.Now().String()})
 }
 
 func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -286,4 +286,12 @@ func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(token)
+}
+
+func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+
 }
