@@ -68,3 +68,12 @@ type PlayerSsoToken struct {
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
+
+type PlayerPasswordResetLink struct {
+	ID        int64     `json:"id" gorm:"primary_key"`
+	PlayerId  int64     `json:"player_id"`
+	Token     string    `json:"token"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	UsedAt    time.Time `json:"used_at"`
+}

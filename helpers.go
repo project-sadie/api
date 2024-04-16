@@ -96,7 +96,7 @@ func sendResetPasswordEmail(player Player, resetId string) {
 	siteName := os.Getenv("SITE_NAME")
 	subject := fmt.Sprintf("%s password reset", siteName, player.Username)
 	resetLink := fmt.Sprintf("%s/password-reset/%s", siteUrl, resetId)
-	body := fmt.Sprintf("You can use the following link to reset your password.<br><a href=\"%s\">%s</a>", resetLink)
+	body := fmt.Sprintf("You can use the following link to reset your password.<br><a href=\"%s\">%s</a><br><br>This link will expire in 10 minutes.", resetLink)
 
 	m := gomail.NewMessage()
 

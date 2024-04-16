@@ -248,7 +248,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if os.Getenv("SEND_EMAIL_ON_SIGNUP") == "true" {
+	if os.Getenv("SEND_WELCOME_EMAIL") == "true" {
 		sendWelcomeEmail(player)
 	}
 
@@ -277,7 +277,7 @@ func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	token := PlayerSsoToken{
 		PlayerId:  player.ID,
-		Token:     randSeq(20),
+		Token:     randSeq(30),
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(time.Minute * 30),
 	}
@@ -293,7 +293,62 @@ func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
+	var player Player
+
+	var bodyMap map[string]interface{}
+
+	decoder := json.NewDecoder(r.Body)
+	_ = decoder.Decode(&bodyMap)
+
+	email := bodyMap["email"].(string)
+
+	var queryError = database.Model(Player{}).
+		Where("email = ?", email).
+		First(&player).
+		Error
+
+	if queryError != nil {
+		log.Fatalln(queryError)
+		return
+	}
+
+	var count int
+
+	countError := database.Model(PlayerPasswordResetLink{}).
+		Where("player_id = ?", player.ID).
+		Where("created_at > ?", time.Now().Add(-time.Hour*1)).
+		Count(&count).
+		Error
+
+	if countError != nil {
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: countError.Error()})
+		return
+	}
+
+	if count > getEnvAsInt("MAX_PASSWORD_RESETS_PER_HOUR", 5) {
+		w.WriteHeader(429)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "You can't do this right now."})
+		return
+	}
+
+	resetLink := PlayerSsoToken{
+		PlayerId:  player.ID,
+		Token:     randSeq(30),
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(time.Minute * 10),
+	}
+
+	var resetLinkError = database.Create(&resetLink).Error
+
+	if resetLinkError != nil {
+		log.Fatalln(resetLinkError)
+		return
+	}
+
+	sendResetPasswordEmail(player, resetLink.Token)
+	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "We've sent you an email"})
 }
 
 func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
