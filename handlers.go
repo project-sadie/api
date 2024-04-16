@@ -404,6 +404,13 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+	if hashError != nil {
+		log.Fatalln(hashError)
+		return
+	}
+
 	database.
 		Model(&resetLink).
 		Update("used_at", time.Now())
@@ -422,5 +429,5 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 
 	database.
 		Model(&player).
-		Update("password = ?", password)
+		Update("password = ?", hashedPassword)
 }
