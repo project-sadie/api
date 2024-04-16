@@ -11,6 +11,7 @@ import (
 	"github.com/go-oauth2/oauth2/v4/store"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/net/context"
+	"gopkg.in/gomail.v2"
 	"log"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ var database *gorm.DB
 var databaseError error
 var oauthServer *server.Server
 var serviceClient OauthClient
+var emailer gomail.Dialer
 
 func loadDatabase() {
 	var connectionString = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true",
@@ -95,6 +97,14 @@ func setupOauth() {
 	})
 
 	oauthServer.SetAllowedGrantType(oauth2.PasswordCredentials)
+}
+
+func setupMail() {
+	emailer := gomail.NewDialer(
+		os.Getenv("MAIL_HOST"),
+		getEnvAsInt("MAIL_PORT", 587),
+		os.Getenv("MAIL_USERNAME"),
+		os.Getenv("MAIL_PASSWORD"))
 }
 
 func authorizeMiddleware(next http.Handler) http.Handler {

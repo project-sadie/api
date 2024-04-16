@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"gopkg.in/gomail.v2"
 	"math/rand"
 	"net/http"
 	"net/mail"
@@ -12,6 +14,15 @@ import (
 func getEnv(key string, defaultVal string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
+	}
+
+	return defaultVal
+}
+
+func getEnvAsInt(name string, defaultVal int) int {
+	valueStr := getEnv(name, "")
+	if value, err := strconv.Atoi(valueStr); err == nil {
+		return int(value)
 	}
 
 	return defaultVal
@@ -65,4 +76,32 @@ func randSeq(n int) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+func sendWelcomeEmail(player Player) {
+	siteName := os.Getenv("SITE_NAME")
+	subject := fmt.Sprintf("Welcome to %s %s!", siteName, player.Username)
+	body := "We're glad you're here."
+
+	m := gomail.NewMessage()
+
+	m.SetHeader("From", os.Getenv("MAIL_FROM_ADDRESS"))
+	m.SetHeader("To", player.Email)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain", body)
+}
+
+func sendResetPasswordEmail(player Player, resetId string) {
+	siteUrl := os.Getenv("SITE_URL")
+	siteName := os.Getenv("SITE_NAME")
+	subject := fmt.Sprintf("%s password reset", siteName, player.Username)
+	resetLink := fmt.Sprintf("%s/password-reset/%s", siteUrl, resetId)
+	body := fmt.Sprintf("You can use the following link to reset your password.<br><a href=\"%s\">%s</a>", resetLink)
+
+	m := gomail.NewMessage()
+
+	m.SetHeader("From", os.Getenv("MAIL_FROM_ADDRESS"))
+	m.SetHeader("To", player.Email)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain", body)
 }

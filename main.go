@@ -16,6 +16,7 @@ func main() {
 
 	loadDatabase()
 	setupOauth()
+	setupMail()
 	registerRoutes()
 	serveHttp()
 }

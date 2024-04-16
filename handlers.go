@@ -248,6 +248,10 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if os.Getenv("SEND_EMAIL_ON_SIGNUP") == "true" {
+		sendWelcomeEmail(player)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(player)
 }
