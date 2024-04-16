@@ -13,10 +13,10 @@ func registerRoutes() {
 	router.HandleFunc("/auth/login", PlayerLoginHandler).Methods("POST")
 	router.HandleFunc("/auth/create", PlayerCreateHandler).Methods("POST")
 
-	router.HandleFunc("/send-password-reset-email", SendForgotPasswordEmailHandler).Methods("POST")
+	router.HandleFunc("/reset-password/send-email", SendForgotPasswordEmailHandler).Methods("POST")
 
 	router.HandleFunc("/reset-password/{token}", GetResetPasswordLink).Methods("GET")
-	router.HandleFunc("/reset-password/{token}", ResetPasswordHandler).Methods("POST")
+	router.HandleFunc("/reset-password/{token}", UseResetPasswordLink).Methods("POST")
 
 	router.HandleFunc("/ping", PingHandler).Methods("GET")
 

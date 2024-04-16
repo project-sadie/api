@@ -89,6 +89,11 @@ func sendWelcomeEmail(player Player) {
 	m.SetHeader("To", player.Email)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
+
+	if err := emailer.DialAndSend(m); err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
 }
 
 func sendResetPasswordEmail(player Player, resetId string) {
@@ -104,4 +109,9 @@ func sendResetPasswordEmail(player Player, resetId string) {
 	m.SetHeader("To", player.Email)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
+
+	if err := emailer.DialAndSend(m); err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
 }

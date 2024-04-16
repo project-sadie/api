@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-oauth2/oauth2/v4"
+	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -352,9 +353,74 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetResetPasswordLink(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 
+	var resetLink PlayerPasswordResetLink
+
+	var queryError = database.Model(PlayerPasswordResetLink{}).
+		Where("token = ?", params["token"]).
+		First(&resetLink).
+		Error
+
+	if errors.Is(queryError, gorm.ErrRecordNotFound) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resetLink)
 }
 
-func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
+	params := mux.Vars(r)
+
+	var resetLink PlayerPasswordResetLink
+
+	var queryError = database.Model(PlayerPasswordResetLink{}).
+		Where("token = ?", params["token"]).
+		Where("expires_at > ?", time.Now()).
+		Where("used_at IS NULL").
+		First(&resetLink).
+		Error
+
+	if errors.Is(queryError, gorm.ErrRecordNotFound) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var bodyMap map[string]interface{}
+
+	decoder := json.NewDecoder(r.Body)
+	_ = decoder.Decode(&bodyMap)
+
+	password := bodyMap["password"].(string)
+
+	if len(password) < 10 {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The password you've selected is too short"})
+		return
+	}
+
+	database.
+		Model(&resetLink).
+		Update("used_at", time.Now())
+
+	var player Player
+
+	var playerError = database.Model(Player{}).
+		Where("id = ?", resetLink.PlayerId).
+		First(&player).
+		Error
+
+	if errors.Is(playerError, gorm.ErrRecordNotFound) {
+		log.Fatalln(playerError)
+		return
+	}
+
+	database.
+		Model(&player).
+		Update("password = ?", password)
 }
