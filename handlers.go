@@ -329,7 +329,7 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 	if count > getEnvAsInt("MAX_PASSWORD_RESETS_PER_HOUR", 5) {
 		w.WriteHeader(429)
-		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "You can't do this right now."})
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "You're doing too much, slow down!"})
 		return
 	}
 
@@ -349,6 +349,10 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 	sendResetPasswordEmail(player, resetLink.Token)
 	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "We've sent you an email"})
+}
+
+func GetResetPasswordLink(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {

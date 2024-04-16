@@ -14,7 +14,8 @@ func registerRoutes() {
 	router.HandleFunc("/auth/create", PlayerCreateHandler).Methods("POST")
 
 	router.HandleFunc("/send-password-reset-email", SendForgotPasswordEmailHandler).Methods("POST")
-	router.HandleFunc("/reset-password", ResetPasswordHandler).Methods("POST")
+	router.HandleFunc("/reset-password-link/{token}", GetResetPasswordLink).Methods("GET")
+	router.HandleFunc("/reset-password-link/{token}", ResetPasswordHandler).Methods("POST")
 
 	router.HandleFunc("/ping", PingHandler)
 
