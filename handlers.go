@@ -157,6 +157,18 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var foundEmail Player
+	var emailQueryError = database.Model(Player{}).
+		Where("email = ?", email).
+		First(&foundEmail).
+		Error
+
+	if !errors.Is(emailQueryError, gorm.ErrRecordNotFound) {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The email you've chosen has been taken"})
+		return
+	}
+
 	if isValidEmail(email) == false {
 		w.WriteHeader(403)
 		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Please provide a real email address"})
