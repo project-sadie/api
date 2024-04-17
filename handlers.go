@@ -169,6 +169,27 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// MAX_ACCOUNTS_PER_IP
+	if getEnvAsInt("MAX_ACCOUNTS_PER_IP", 5) != 0 {
+		var count int
+
+		countError := database.Model(PlayerWebsiteData{}).
+			Where("initial_ip = ?", getUserIp(r)).
+			Count(&count).
+			Error
+
+		if countError != nil {
+			json.NewEncoder(w).Encode(DefaultApiResponse{Message: countError.Error()})
+			return
+		}
+
+		if count > getEnvAsInt("MAX_ACCOUNTS_PER_IP", 5) {
+			w.WriteHeader(403)
+			json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Too many accounts, try again soon!"})
+			return
+		}
+	}
+
 	if isValidEmail(email) == false {
 		w.WriteHeader(403)
 		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Please provide a real email address"})
