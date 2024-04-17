@@ -320,6 +320,7 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 	countError := database.Model(PlayerPasswordResetLink{}).
 		Where("player_id = ?", player.ID).
 		Where("created_at > ?", time.Now().Add(-time.Hour*1)).
+		Where("used_at IS NULL").
 		Count(&count).
 		Error
 
@@ -359,6 +360,8 @@ func GetResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 
 	var queryError = database.Model(PlayerPasswordResetLink{}).
 		Where("token = ?", params["token"]).
+		Where("expires_at > ?", time.Now()).
+		Where("used_at IS NULL").
 		First(&resetLink).
 		Error
 
@@ -412,6 +415,7 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	fmt.Println(password)
 
 	if hashError != nil {
 		log.Fatalln(hashError)
@@ -436,5 +440,7 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 
 	database.
 		Model(&player).
-		Update("password = ?", hashedPassword)
+		Update("password", hashedPassword)
+
+	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your password has been updated"})
 }
