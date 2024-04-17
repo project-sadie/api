@@ -135,11 +135,11 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if password != passwordConfirm {
 		w.WriteHeader(403)
-		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your password confirmation must match your password"})
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your confirmation must match your password"})
 		return
 	}
 
-	if len(password) < 10 {
+	if len(password) < getEnvAsInt("VALIDATION_MIN_PASSWORD_LENGTH", 10) {
 		w.WriteHeader(403)
 		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The password you've selected is too short"})
 		return
@@ -334,7 +334,7 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resetLink := PlayerSsoToken{
+	resetLink := PlayerPasswordResetLink{
 		PlayerId:  player.ID,
 		Token:     randSeq(30),
 		CreatedAt: time.Now(),
@@ -397,8 +397,15 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 	_ = decoder.Decode(&bodyMap)
 
 	password := bodyMap["password"].(string)
+	passwordConfirm := bodyMap["password_confirm"].(string)
 
-	if len(password) < 10 {
+	if password != passwordConfirm {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your confirmation must match your password"})
+		return
+	}
+
+	if len(password) < getEnvAsInt("VALIDATION_MIN_PASSWORD_LENGTH", 10) {
 		w.WriteHeader(403)
 		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The password you've selected is too short"})
 		return

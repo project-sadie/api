@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/go-oauth2/oauth2/v4"
@@ -23,7 +24,7 @@ var database *gorm.DB
 var databaseError error
 var oauthServer *server.Server
 var serviceClient OauthClient
-var emailer gomail.Dialer
+var eDialer *gomail.Dialer
 
 func loadDatabase() {
 	var connectionString = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true",
@@ -100,11 +101,13 @@ func setupOauth() {
 }
 
 func setupMail() {
-	emailer := gomail.NewDialer(
+	eDialer = gomail.NewDialer(
 		os.Getenv("MAIL_HOST"),
 		getEnvAsInt("MAIL_PORT", 587),
 		os.Getenv("MAIL_USERNAME"),
 		os.Getenv("MAIL_PASSWORD"))
+
+	eDialer.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 }
 
 func authorizeMiddleware(next http.Handler) http.Handler {

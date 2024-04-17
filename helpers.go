@@ -90,7 +90,7 @@ func sendWelcomeEmail(player Player) {
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
 
-	if err := emailer.DialAndSend(m); err != nil {
+	if err := eDialer.DialAndSend(m); err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
@@ -101,7 +101,7 @@ func sendResetPasswordEmail(player Player, resetId string) {
 	siteName := os.Getenv("SITE_NAME")
 	subject := fmt.Sprintf("%s password reset", siteName, player.Username)
 	resetLink := fmt.Sprintf("%s/password-reset/%s", siteUrl, resetId)
-	body := fmt.Sprintf("You can use the following link to reset your password.<br><a href=\"%s\">%s</a><br><br>This link will expire in 10 minutes.", resetLink)
+	body := fmt.Sprintf("You can use the following link to reset your password.<br><a href=\"%s\">%s</a><br><br>This link will expire in 10 minutes.", resetLink, resetLink)
 
 	m := gomail.NewMessage()
 
@@ -110,7 +110,7 @@ func sendResetPasswordEmail(player Player, resetId string) {
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
 
-	if err := emailer.DialAndSend(m); err != nil {
+	if err := eDialer.DialAndSend(m); err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
