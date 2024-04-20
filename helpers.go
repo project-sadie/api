@@ -88,7 +88,7 @@ func sendWelcomeEmail(player Player) {
 	m.SetHeader("From", os.Getenv("MAIL_FROM_ADDRESS"))
 	m.SetHeader("To", player.Email)
 	m.SetHeader("Subject", subject)
-	m.SetBody("text/plain", body)
+	m.SetBody("text/html", body)
 
 	if err := eDialer.DialAndSend(m); err != nil {
 		fmt.Println(err)
@@ -108,7 +108,7 @@ func sendResetPasswordEmail(player Player, resetId string) {
 	m.SetHeader("From", os.Getenv("MAIL_FROM_ADDRESS"))
 	m.SetHeader("To", player.Email)
 	m.SetHeader("Subject", subject)
-	m.SetBody("text/plain", body)
+	m.SetBody("text/html", body)
 
 	if err := eDialer.DialAndSend(m); err != nil {
 		fmt.Println(err)
