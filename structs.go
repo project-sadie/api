@@ -70,10 +70,10 @@ type PlayerSsoToken struct {
 }
 
 type PlayerPasswordResetLink struct {
-	ID        int64     `json:"id" gorm:"primary_key"`
-	PlayerId  int64     `json:"player_id"`
-	Token     string    `json:"token"`
-	CreatedAt time.Time `json:"created_at"`
-	ExpiresAt time.Time `json:"expires_at"`
-	UsedAt    time.Time `json:"used_at"`
+	ID        int64      `json:"id" gorm:"primary_key"`
+	PlayerId  int64      `json:"player_id"`
+	Token     string     `json:"token"`
+	CreatedAt time.Time  `json:"created_at"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	UsedAt    *time.Time `json:"used_at" gorm:"type:TIMESTAMP;null;default:null"`
 }
