@@ -352,7 +352,7 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 	countError := database.Model(PlayerPasswordResetLink{}).
 		Where("player_id = ?", player.ID).
-		Where("expired_at > ?", time.Now()).
+		Where("expires_at > ?", time.Now()).
 		Where("used_at IS NULL").
 		Count(&count).
 		Error
