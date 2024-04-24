@@ -33,6 +33,7 @@ type PlayerData struct {
 	CreditBalance   int64 `json:"credit_balance"`
 	PixelBalance    int64 `json:"pixel_balance"`
 	SeasonalBalance int64 `json:"seasonal_balance"`
+	GotwPoints      int64 `json:"gotw_points"`
 }
 
 type PlayerAvatarData struct {
@@ -55,10 +56,11 @@ type PlayerNavigatorSettings struct {
 }
 
 type PlayerWebsiteData struct {
-	ID        int64  `json:"id" gorm:"primary_key"`
-	PlayerId  int64  `json:"player_id"`
-	InitialIp string `json:"initial_ip"`
-	LastIp    string `json:"last_ip"`
+	ID        int64     `json:"id" gorm:"primary_key"`
+	PlayerId  int64     `json:"player_id"`
+	InitialIp string    `json:"initial_ip"`
+	LastIp    string    `json:"last_ip"`
+	LastLogin time.Time `json:"last_login"`
 }
 
 type PlayerSsoToken struct {

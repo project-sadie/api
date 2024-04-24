@@ -169,7 +169,6 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// MAX_ACCOUNTS_PER_IP
 	if getEnvAsInt("MAX_ACCOUNTS_PER_IP", 5) != 0 {
 		var count int
 
@@ -223,6 +222,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		CreditBalance:   getEnvAsInt64("DEFAULT_PLAYER_CREDITS", 10000),
 		PixelBalance:    getEnvAsInt64("DEFAULT_PLAYER_PIXELS", 10000),
 		SeasonalBalance: getEnvAsInt64("DEFAULT_PLAYER_SEASONAL", 500),
+		GotwPoints:      0,
 	}
 
 	var dataError = database.Create(&playerData).Error
@@ -273,6 +273,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		PlayerId:  player.ID,
 		InitialIp: getUserIp(r),
 		LastIp:    getUserIp(r),
+		LastLogin: time.Now(),
 	}
 
 	var websiteDataError = database.Create(&websiteData).Error
