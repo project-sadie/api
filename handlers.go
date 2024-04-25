@@ -576,3 +576,22 @@ func UpdateSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your changes have been saved"})
 }
+
+func GetPlayerProfileHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	var player Player
+
+	var queryError = database.Model(Player{}).
+		Preload("Data").
+		Preload("AvatarData").
+		Where("username = ?", params["username"]).
+		First(&player).
+		Error
+
+	if queryError != nil {
+		log.Fatalln(queryError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(player)
+}

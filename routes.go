@@ -29,4 +29,6 @@ func registerRoutes() {
 
 	authRouter.HandleFunc("/sso-token", PlayerSsoTokenHandler).Methods("GET")
 	authRouter.HandleFunc("/roles", RolesHandler).Methods("GET")
+
+	router.HandleFunc("/profile/{username}", GetPlayerProfileHandler).Methods("GET")
 }
