@@ -95,6 +95,7 @@ func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var player Player
 
 	var queryError = database.Model(Player{}).
+		Preload("Data").
 		Preload("AvatarData").
 		Where("username = ?", tokenInfo.GetUserID()).
 		First(&player).
@@ -477,4 +478,101 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 		Update("password", hashedPassword)
 
 	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your password has been updated"})
+}
+
+func RolesHandler(w http.ResponseWriter, r *http.Request) {
+	var roles []Role
+
+	var queryError = database.Model(&Role{}).
+		Preload("Players.Data").
+		Preload("Players.AvatarData").
+		Where("id > 1").
+		Find(&roles).
+		Error
+
+	if queryError != nil {
+		log.Fatalln(queryError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(roles)
+}
+
+func UpdateSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var bodyMap map[string]interface{}
+
+	decoder := json.NewDecoder(r.Body)
+	_ = decoder.Decode(&bodyMap)
+
+	email := bodyMap["email"].(string)
+	motto := bodyMap["motto"].(string)
+	password := bodyMap["password"].(string)
+
+	tokenInfo := r.Context().Value("tokenInfo").(oauth2.TokenInfo)
+
+	var player Player
+
+	var queryError = database.Model(Player{}).
+		Preload("Data").
+		Preload("AvatarData").
+		Where("username = ?", tokenInfo.GetUserID()).
+		First(&player).
+		Error
+
+	if queryError != nil {
+		log.Fatalln(queryError)
+	}
+
+	if len(email) < 5 || len(email) > 30 || !isValidEmail(email) {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Please provide a valid email address"})
+		return
+	}
+
+	if len(motto) > 30 {
+		w.WriteHeader(403)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "This motto is too long"})
+		return
+	}
+
+	if bcrypt.CompareHashAndPassword([]byte(player.Password), []byte(password)) != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your current password is incorrect"})
+		return
+	}
+
+	if newPassword, ok := bodyMap["new_password"].(string); ok {
+		if len(newPassword) < getEnvAsInt("VALIDATION_MIN_PASSWORD_LENGTH", 10) {
+			w.WriteHeader(403)
+			json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The password you've selected is too short"})
+			return
+		}
+
+		hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+
+		if hashError != nil {
+			w.WriteHeader(500)
+			json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Something went wrong"})
+			log.Fatalln(queryError)
+			return
+		}
+
+		database.
+			Model(&player).
+			Update("password", hashedPassword)
+
+	}
+
+	database.
+		Model(&player).
+		Update("email", email)
+
+	database.
+		Model(&player.AvatarData).
+		Update("motto", motto)
+
+	json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your changes have been saved"})
 }

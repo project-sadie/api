@@ -23,17 +23,21 @@ type Player struct {
 	Email      string           `json:"email"`
 	Password   string           `json:"-"`
 	CreatedAt  time.Time        `json:"created_at"`
+	Data       PlayerData       `json:"data"`
+	Roles      []Role           `json:"roles" gorm:"many2many:player_role;"`
 	AvatarData PlayerAvatarData `json:"avatar_data"`
 }
 
 type PlayerData struct {
-	ID              int64 `json:"id" gorm:"primary_key"`
-	PlayerId        int64 `json:"player_id"`
-	HomeRoomId      int32 `json:"home_room_id"`
-	CreditBalance   int64 `json:"credit_balance"`
-	PixelBalance    int64 `json:"pixel_balance"`
-	SeasonalBalance int64 `json:"seasonal_balance"`
-	GotwPoints      int64 `json:"gotw_points"`
+	ID              int64     `json:"id" gorm:"primary_key"`
+	PlayerId        int64     `json:"player_id"`
+	HomeRoomId      int32     `json:"home_room_id"`
+	CreditBalance   int64     `json:"credit_balance"`
+	PixelBalance    int64     `json:"pixel_balance"`
+	SeasonalBalance int64     `json:"seasonal_balance"`
+	GotwPoints      int64     `json:"gotw_points"`
+	IsOnline        int16     `json:"is_online"`
+	LastOnline      time.Time `json:"last_online"`
 }
 
 type PlayerAvatarData struct {
@@ -78,4 +82,14 @@ type PlayerPasswordResetLink struct {
 	CreatedAt time.Time  `json:"created_at"`
 	ExpiresAt time.Time  `json:"expires_at"`
 	UsedAt    *time.Time `json:"used_at" gorm:"type:TIMESTAMP;null;default:null"`
+}
+
+type Role struct {
+	ID      int64    `json:"id" gorm:"primary_key"`
+	Name    string   `json:"name"`
+	Players []Player `json:"players" gorm:"many2many:player_role;"`
+}
+
+type Tabler interface {
+	TableName() string
 }

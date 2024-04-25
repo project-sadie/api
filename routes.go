@@ -24,5 +24,9 @@ func registerRoutes() {
 	authRouter.Use(authorizeMiddleware)
 
 	authRouter.HandleFunc("/auth/me", PlayerRequestHandler).Methods("GET")
+
+	authRouter.HandleFunc("/settings", UpdateSettingsHandler).Methods("POST")
+
 	authRouter.HandleFunc("/sso-token", PlayerSsoTokenHandler).Methods("GET")
+	authRouter.HandleFunc("/roles", RolesHandler).Methods("GET")
 }
