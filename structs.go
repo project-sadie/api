@@ -64,7 +64,7 @@ type PlayerWebsiteData struct {
 	PlayerId  int64     `json:"player_id"`
 	InitialIp string    `json:"initial_ip"`
 	LastIp    string    `json:"last_ip"`
-	LastLogin time.Time `json:"last_login"`
+	LastLogin time.Time `json:"last_login" gorm:"type:TIMESTAMP;null;default:null"`
 }
 
 type PlayerSsoToken struct {
