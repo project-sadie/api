@@ -588,8 +588,10 @@ func GetPlayerProfileHandler(w http.ResponseWriter, r *http.Request) {
 		First(&player).
 		Error
 
-	if queryError != nil {
-		log.Fatalln(queryError)
+	if errors.Is(queryError, gorm.ErrRecordNotFound) {
+		w.WriteHeader(404)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The requested profile couldn't be found"})
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
