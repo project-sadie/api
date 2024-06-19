@@ -219,7 +219,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	playerData := PlayerData{
 		PlayerId:        player.ID,
-		HomeRoomId:      getEnvAsInt32("DEFAULT_PLAYER_HOME_ROOM", 0),
+		HomeRoomId:      nil,
 		CreditBalance:   getEnvAsInt64("DEFAULT_PLAYER_CREDITS", 10000),
 		PixelBalance:    getEnvAsInt64("DEFAULT_PLAYER_PIXELS", 10000),
 		SeasonalBalance: getEnvAsInt64("DEFAULT_PLAYER_SEASONAL", 500),
