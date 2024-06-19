@@ -31,7 +31,6 @@ type Player struct {
 type PlayerData struct {
 	ID              int64     `json:"id" gorm:"primary_key"`
 	PlayerId        int64     `json:"player_id"`
-	HomeRoomId      int32     `json:"home_room_id"`
 	CreditBalance   int64     `json:"credit_balance"`
 	PixelBalance    int64     `json:"pixel_balance"`
 	SeasonalBalance int64     `json:"seasonal_balance"`
