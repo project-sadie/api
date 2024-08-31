@@ -36,7 +36,7 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 		Error
 
 	if errors.Is(queryError, gorm.ErrRecordNotFound) {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
 
 		response := map[string]string{
 			"error_message": "Couldn't find a record with this username",
@@ -51,7 +51,7 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(player.Password)
 
 	if bcrypt.CompareHashAndPassword([]byte(player.Password), []byte(credentials.Password)) != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
 
 		response := map[string]string{
 			"error_message": "Incorrect password, please try again",
@@ -223,6 +223,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		PixelBalance:    getEnvAsInt64("DEFAULT_PLAYER_PIXELS", 10000),
 		SeasonalBalance: getEnvAsInt64("DEFAULT_PLAYER_SEASONAL", 500),
 		GotwPoints:      0,
+		LastOnline: 	 time.Now(),
 	}
 
 	var dataError = database.Create(&playerData).Error
@@ -314,7 +315,7 @@ func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
 		PlayerId:  player.ID,
 		Token:     randSeq(30),
 		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(time.Minute * 30),
+		ExpiresAt: time.Now().Add(time.Minute * 230),
 	}
 
 	var tokenError = database.Create(&token).Error
