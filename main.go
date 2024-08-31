@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/joho/godotenv"
 	"log"
+	"os"
+	"time"
 )
 
 import _ "github.com/go-sql-driver/mysql"
@@ -13,6 +15,8 @@ func main() {
 	if dotenvError != nil {
 		log.Fatal(dotenvError)
 	}
+
+	location, _ = time.LoadLocation(os.Getenv("TIMEZONE"))
 
 	loadDatabase()
 	setupOauth()

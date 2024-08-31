@@ -223,7 +223,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		PixelBalance:    getEnvAsInt64("DEFAULT_PLAYER_PIXELS", 10000),
 		SeasonalBalance: getEnvAsInt64("DEFAULT_PLAYER_SEASONAL", 500),
 		GotwPoints:      0,
-		LastOnline: 	 time.Now(),
+		LastOnline:      time.Now(),
 	}
 
 	var dataError = database.Create(&playerData).Error
@@ -315,7 +315,7 @@ func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
 		PlayerId:  player.ID,
 		Token:     randSeq(30),
 		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(time.Minute * 230),
+		ExpiresAt: time.Now().In(location).Add(time.Minute * 30),
 	}
 
 	var tokenError = database.Create(&token).Error
@@ -374,7 +374,7 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 		PlayerId:  player.ID,
 		Token:     randSeq(30),
 		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(time.Minute * 10),
+		ExpiresAt: time.Now().In(location).Add(time.Minute * 10),
 	}
 
 	var resetLinkError = database.Create(&resetLink).Error

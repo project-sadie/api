@@ -18,6 +18,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var database *gorm.DB
@@ -25,6 +26,7 @@ var databaseError error
 var oauthServer *server.Server
 var serviceClient OauthClient
 var eDialer *gomail.Dialer
+var location *time.Location
 
 func loadDatabase() {
 	var connectionString = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true",
@@ -139,7 +141,7 @@ func authorizeMiddleware(next http.Handler) http.Handler {
 }
 
 func serveHttp() {
-	log.Fatal(http.ListenAndServe(":"+os.Getenv("HTTP_PORT"), corsHandler(router)))
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+os.Getenv("HTTP_PORT"), corsHandler(router)))
 }
 
 func corsHandler(h http.Handler) http.Handler {
