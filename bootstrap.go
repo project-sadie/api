@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/go-oauth2/mysql/v4"
 	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/errors"
 	"github.com/go-oauth2/oauth2/v4/manage"
@@ -48,9 +49,17 @@ func loadDatabase() {
 
 func setupOauth() {
 	manager := manage.NewDefaultManager()
-	manager.MustTokenStorage(store.NewMemoryTokenStore())
 
 	clientStore := store.NewClientStore()
+	tokenStore := mysql.NewDefaultStore(
+		mysql.NewConfig(
+			fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true",
+				os.Getenv("DB_USER"),
+				os.Getenv("DB_PASS"),
+				os.Getenv("DB_HOST"),
+				os.Getenv("DB_PORT"),
+				os.Getenv("DB_NAME"))),
+	)
 
 	var clients []OauthClient
 
@@ -85,6 +94,7 @@ func setupOauth() {
 	}
 
 	manager.MapClientStorage(clientStore)
+	manager.MapTokenStorage(tokenStore)
 
 	oauthServer = server.NewDefaultServer(manager)
 	oauthServer.SetAllowGetAccessRequest(true)
@@ -146,6 +156,8 @@ func serveHttp() {
 
 func corsHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "*")
 		w.Header().Set("Access-Control-Allow-Credentials", "false")

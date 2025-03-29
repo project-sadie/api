@@ -21,12 +21,12 @@ func TokenRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	decoder := json.NewDecoder(r.Body)
 	var credentials Credentials
 
-	_ = decoder.Decode(&credentials)
+	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
 
 	var player Player
 
@@ -42,7 +42,6 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 			"error_message": "Couldn't find a record with this username",
 		}
 
-		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 		return
 	}
@@ -57,7 +56,6 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 			"error_message": "Incorrect password, please try again",
 		}
 
-		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 		return
 	}
@@ -80,12 +78,10 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 		"expires_in":   int64(tokenInfo.GetAccessExpiresIn() / time.Second),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(DefaultApiResponse{Message: time.Now().String()})
 }
 
@@ -105,13 +101,10 @@ func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(queryError)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(player)
 }
 
 func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	var bodyMap map[string]interface{}
 
 	decoder := json.NewDecoder(r.Body)
@@ -288,13 +281,10 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		sendWelcomeEmail(player)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(player)
 }
 
 func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	tokenInfo := r.Context().Value("tokenInfo").(oauth2.TokenInfo)
 
 	var player Player
@@ -329,8 +319,6 @@ func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	var player Player
 
 	var bodyMap map[string]interface{}
@@ -402,17 +390,13 @@ func GetResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 
 	if errors.Is(queryError, gorm.ErrRecordNotFound) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Header().Set("Content-Type", "application/json")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resetLink)
 }
 
 func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	params := mux.Vars(r)
 
 	var resetLink PlayerPasswordResetLink
@@ -495,13 +479,10 @@ func RolesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(roles)
 }
 
 func UpdateSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	var bodyMap map[string]interface{}
 
 	decoder := json.NewDecoder(r.Body)
@@ -594,6 +575,5 @@ func GetPlayerProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(player)
 }
