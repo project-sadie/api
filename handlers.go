@@ -83,7 +83,7 @@ func PlayerLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(DefaultApiResponse{Message: time.Now().String()})
+	json.NewEncoder(w).Encode(DefaultApiResponse{Message: time.Now().In(location).String()})
 }
 
 func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -175,7 +175,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		Username:  req.Username,
 		Email:     req.Email,
 		Password:  string(hashedPassword),
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().In(location),
 	}
 
 	if err := database.Create(&player).Error; err != nil {
@@ -189,7 +189,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		PixelBalance:    getEnvAsInt64("DEFAULT_PLAYER_PIXELS", 10000),
 		SeasonalBalance: getEnvAsInt64("DEFAULT_PLAYER_SEASONAL", 500),
 		GotwPoints:      0,
-		LastOnline:      time.Now(),
+		LastOnline:      time.Now().In(location),
 	}
 
 	if err := database.Create(&playerData).Error; err != nil {
@@ -226,7 +226,7 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		PlayerId:  player.ID,
 		InitialIp: getUserIp(r),
 		LastIp:    getUserIp(r),
-		LastLogin: time.Now(),
+		LastLogin: time.Now().In(location),
 	}
 
 	if err := database.Create(&websiteData).Error; err != nil {
@@ -261,7 +261,7 @@ func PlayerSsoTokenHandler(w http.ResponseWriter, r *http.Request) {
 	token := PlayerSsoToken{
 		PlayerId:  player.ID,
 		Token:     randSeq(30),
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().In(location),
 		ExpiresAt: time.Now().In(location).Add(time.Minute * 30),
 	}
 
@@ -299,7 +299,7 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 	countError := database.Model(PlayerPasswordResetLink{}).
 		Where("player_id = ?", player.ID).
-		Where("expires_at > ?", time.Now()).
+		Where("expires_at > ?", time.Now().In(location)).
 		Where("used_at IS NULL").
 		Count(&count).
 		Error
@@ -318,7 +318,7 @@ func SendForgotPasswordEmailHandler(w http.ResponseWriter, r *http.Request) {
 	resetLink := PlayerPasswordResetLink{
 		PlayerId:  player.ID,
 		Token:     randSeq(30),
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().In(location),
 		ExpiresAt: time.Now().In(location).Add(time.Minute * 10),
 	}
 
@@ -340,7 +340,7 @@ func GetResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 
 	var queryError = database.Model(PlayerPasswordResetLink{}).
 		Where("token = ?", params["token"]).
-		Where("expires_at > ?", time.Now()).
+		Where("expires_at > ?", time.Now().In(location)).
 		Where("used_at IS NULL").
 		First(&resetLink).
 		Error
@@ -360,7 +360,7 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 
 	var queryError = database.Model(PlayerPasswordResetLink{}).
 		Where("token = ?", params["token"]).
-		Where("expires_at > ?", time.Now()).
+		Where("expires_at > ?", time.Now().In(location)).
 		Where("used_at IS NULL").
 		First(&resetLink).
 		Error
@@ -400,7 +400,7 @@ func UseResetPasswordLink(w http.ResponseWriter, r *http.Request) {
 
 	database.
 		Model(&resetLink).
-		Update("used_at", time.Now())
+		Update("used_at", time.Now().In(location))
 
 	var player Player
 
