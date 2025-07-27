@@ -89,6 +89,9 @@ type Role struct {
 	Players []Player `json:"players" gorm:"many2many:player_role;"`
 }
 
-type Tabler interface {
-	TableName() string
+type PlayerCreateRequest struct {
+	Username        string `json:"username" validate:"required,min=3,max=20"`
+	Email           string `json:"email" validate:"required,email"`
+	Password        string `json:"password" validate:"required,min=10"`
+	PasswordConfirm string `json:"password_confirm" validate:"required,eqfield=Password"`
 }

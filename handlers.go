@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-oauth2/oauth2/v4"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
@@ -105,108 +106,80 @@ func PlayerRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
-	var bodyMap map[string]interface{}
+	var req PlayerCreateRequest
 
-	decoder := json.NewDecoder(r.Body)
-	_ = decoder.Decode(&bodyMap)
-
-	username := bodyMap["username"].(string)
-	email := bodyMap["email"].(string)
-	password := bodyMap["password"].(string)
-	passwordConfirm := bodyMap["password_confirm"].(string)
-
-	if len(username) < 3 {
-		w.WriteHeader(403)
-		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The username you've selected is too short"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Invalid JSON body"})
 		return
 	}
 
-	if len(username) > 20 {
-		w.WriteHeader(403)
-		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The username you've selected is too long"})
-		return
-	}
-
-	if password != passwordConfirm {
-		w.WriteHeader(403)
-		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Your confirmation must match your password"})
-		return
-	}
-
-	if len(password) < getEnvAsInt("VALIDATION_MIN_PASSWORD_LENGTH", 10) {
-		w.WriteHeader(403)
-		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The password you've selected is too short"})
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Validation failed"})
 		return
 	}
 
 	var foundPlayer Player
-	var queryError = database.Model(Player{}).
-		Where("username = ?", username).
-		First(&foundPlayer).
-		Error
-
-	if !errors.Is(queryError, gorm.ErrRecordNotFound) {
-		w.WriteHeader(403)
+	if err := database.Model(Player{}).Where("username = ?", req.Username).First(&foundPlayer).Error; err == nil {
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The username you've chosen has been taken"})
+		return
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: err.Error()})
 		return
 	}
 
 	var foundEmail Player
-	var emailQueryError = database.Model(Player{}).
-		Where("email = ?", email).
-		First(&foundEmail).
-		Error
-
-	if !errors.Is(emailQueryError, gorm.ErrRecordNotFound) {
-		w.WriteHeader(403)
+	if err := database.Model(Player{}).Where("email = ?", req.Email).First(&foundEmail).Error; err == nil {
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "The email you've chosen has been taken"})
+		return
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(DefaultApiResponse{Message: err.Error()})
 		return
 	}
 
 	if getEnvAsInt("MAX_ACCOUNTS_PER_IP", 5) != 0 {
 		var count int
-
-		countError := database.Model(PlayerWebsiteData{}).
+		if err := database.Model(PlayerWebsiteData{}).
 			Where("initial_ip = ?", getUserIp(r)).
-			Count(&count).
-			Error
-
-		if countError != nil {
-			json.NewEncoder(w).Encode(DefaultApiResponse{Message: countError.Error()})
+			Count(&count).Error; err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(DefaultApiResponse{Message: err.Error()})
 			return
 		}
-
-		if count > getEnvAsInt("MAX_ACCOUNTS_PER_IP", 5) {
-			w.WriteHeader(403)
+		if count >= getEnvAsInt("MAX_ACCOUNTS_PER_IP", 5) {
+			w.WriteHeader(http.StatusForbidden)
 			json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Too many accounts, try again soon!"})
 			return
 		}
 	}
 
-	if isValidEmail(email) == false {
-		w.WriteHeader(403)
+	if !isValidEmail(req.Email) {
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(DefaultApiResponse{Message: "Please provide a real email address"})
 		return
 	}
 
-	hashedPassword, hashError := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
-	if hashError != nil {
-		log.Fatalln(hashError)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalln(err)
 		return
 	}
 
 	player := Player{
-		Username:  username,
-		Email:     email,
+		Username:  req.Username,
+		Email:     req.Email,
 		Password:  string(hashedPassword),
 		CreatedAt: time.Now(),
 	}
 
-	var dbError = database.Create(&player).Error
-
-	if dbError != nil {
-		log.Fatalln(dbError)
+	if err := database.Create(&player).Error; err != nil {
+		log.Fatalln(err)
 		return
 	}
 
@@ -219,10 +192,8 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		LastOnline:      time.Now(),
 	}
 
-	var dataError = database.Create(&playerData).Error
-
-	if dataError != nil {
-		log.Fatalln("Failed to create player data: ", dataError)
+	if err := database.Create(&playerData).Error; err != nil {
+		log.Fatalln("Failed to create player data: ", err)
 		return
 	}
 
@@ -234,32 +205,20 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		ChatBubbleId: 1,
 	}
 
-	var avatarDataError = database.Create(&avatarData).Error
-
-	if avatarDataError != nil {
-		log.Fatalln(avatarDataError)
+	if err := database.Create(&avatarData).Error; err != nil {
+		log.Fatalln(err)
 		return
 	}
 
-	gameSettings := PlayerGameSettings{
-		PlayerId: player.ID,
-	}
-
-	var gameSettingsError = database.Create(&gameSettings).Error
-
-	if gameSettingsError != nil {
-		log.Fatalln(gameSettingsError)
+	gameSettings := PlayerGameSettings{PlayerId: player.ID}
+	if err := database.Create(&gameSettings).Error; err != nil {
+		log.Fatalln(err)
 		return
 	}
 
-	navigatorSettings := PlayerNavigatorSettings{
-		PlayerId: player.ID,
-	}
-
-	var navigatorSettingsError = database.Create(&navigatorSettings).Error
-
-	if navigatorSettingsError != nil {
-		log.Fatalln(navigatorSettingsError)
+	navigatorSettings := PlayerNavigatorSettings{PlayerId: player.ID}
+	if err := database.Create(&navigatorSettings).Error; err != nil {
+		log.Fatalln(err)
 		return
 	}
 
@@ -270,10 +229,8 @@ func PlayerCreateHandler(w http.ResponseWriter, r *http.Request) {
 		LastLogin: time.Now(),
 	}
 
-	var websiteDataError = database.Create(&websiteData).Error
-
-	if websiteDataError != nil {
-		log.Fatalln(websiteDataError)
+	if err := database.Create(&websiteData).Error; err != nil {
+		log.Fatalln(err)
 		return
 	}
 
